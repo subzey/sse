@@ -5,9 +5,9 @@ import { sseMessage } from './message.js';
 
 export class MessageChannel extends EventEmitter {
 	/** Raw deflate compressor that holds the backref buffer */
-	private _lastRaw: Uint8Array | undefined;
-	private readonly _messages: MessageItem[];
-	private readonly _maxCache = 100;
+	protected _lastRaw: Uint8Array | undefined;
+	protected readonly _messages: MessageItem[];
+	protected readonly _maxCache = 100;
 
 	constructor() {
 		super();

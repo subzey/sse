@@ -1,4 +1,6 @@
-import { createServer, IncomingMessage, ServerResponse } from 'http';
+import { readFileSync } from 'fs';
+import { URL } from 'url';
+import { createSecureServer, ServerHttp2Stream, IncomingHttpHeaders } from 'http2';
 import { VanillaFakeChannel, MotivationalFakeChannel } from './fake-channel.js';
 import { Connection } from './connection.js';
 
@@ -7,37 +9,57 @@ const fakeChannels = {
 	'motivational': new MotivationalFakeChannel(),
 } as const;
 
-function notFound(req: IncomingMessage, res: ServerResponse): void {
-	res.writeHead(404);
-	res.end();
-}
 
-function handler(req: IncomingMessage, res: ServerResponse, flavor: keyof typeof fakeChannels): void {
-	res.writeHead(200, {
+function handler(flavor: keyof typeof fakeChannels, stream: ServerHttp2Stream, headers: IncomingHttpHeaders): void {
+	stream.respond({
+		':status': 200,
 		'content-type': 'text/event-stream',
 		'content-encoding': 'gzip',
 		'access-control-allow-origin': '*',
 	});
-	const lastEventId = (Array.isArray(req.headers['last-event-id']) ? req.headers['last-event-id'][0] : req.headers['last-event-id']) || undefined;
+	const lastEventId = (Array.isArray(headers['last-event-id']) ? headers['last-event-id'][0] : headers['last-event-id']) || undefined;
 	const connection = new Connection(
-		res.write.bind(res),
+		stream.write.bind(stream),
 		fakeChannels[flavor],
 		lastEventId
 	);
-	req.on('close', () => connection.destroy());
+	stream.on('close', () => connection.destroy());
 }
 
-const server = createServer((req: IncomingMessage, res: ServerResponse) => {
-	if (req.url === '/vanilla/') {
-		return handler(req, res, 'vanilla');
+function serveStatic(stream: ServerHttp2Stream): void {
+	stream.respond({
+		':status': 200,
+		'content-type': 'text/html;charset=utf-8',
+	});
+	stream.end(readFileSync('client.html'));
+}
+
+function notFound(stream: ServerHttp2Stream): void {
+	stream.respond({':status': 404});
+	stream.end();
+}
+
+const server = createSecureServer({
+	key: readFileSync('localhost-privkey.pem'),
+	cert: readFileSync('localhost-cert.pem'),
+});
+
+server.on('stream', (stream: ServerHttp2Stream, headers: IncomingHttpHeaders): void => {
+	const { pathname } = new URL(headers[':path'] || '/', 'https://127.0.0.1');
+	console.log(pathname);
+	if (pathname === '/') {
+		return serveStatic(stream);
 	}
-	if (req.url === '/motivational/') {
-		return handler(req, res, 'motivational');
+	if (pathname === '/vanilla/') {
+		return handler('vanilla', stream, headers);
 	}
-	return notFound(req, res);
-})
-.on('listening', () => {
+	if (pathname === '/motivational/') {
+		return handler('motivational', stream, headers);
+	}
+	return notFound(stream);
+});
+server.on('listening', () => {
 	const addr = server.address() as { port: number };
-	console.log(`Listening on ${addr.port}`);
-})
-.listen(8080)
+	console.log(`https://127.0.0.1:${addr.port}/`);
+});
+server.listen(3443)
