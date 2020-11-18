@@ -3,9 +3,8 @@
 	<head></head>
 	<body>
 		<script>
-const sse = new EventSource('http://127.0.0.1:8080/sse/');
-sse.addEventListener('meta', console.log);
-sse.addEventListener('message', console.log);
+const vanilla = new EventSource('http://127.0.0.1:8080/vanilla/');
+const motivational = new EventSource('http://127.0.0.1:8080/motivational/');
 		</script>
 	</body>
 </html>
