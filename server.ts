@@ -48,12 +48,22 @@ server.on('stream', (stream: ServerHttp2Stream, headers: IncomingHttpHeaders): v
 	const { pathname } = new URL(headers[':path'] || '/', 'https://127.0.0.1');
 	console.log(pathname);
 	if (pathname === '/') {
-		return serveStatic(stream);
+		stream.respondWithFile('client.html', {':status': 200, 'content-type': 'text/html;charset=utf-8'});
+		return;
 	}
-	if (pathname === '/vanilla/') {
+	if (pathname === '/blank/') {
+		stream.respond({':status': 200, 'content-type': 'text/html'});
+		stream.end('<!doctype html>');
+		return;
+	}
+	if (pathname === '/service-worker.js') {
+		stream.respondWithFile('service-worker.js', {':status': 200, 'content-type': 'application/javascript;charset=utf-8'});
+		return;
+	}
+	if (pathname === '/sse/vanilla/') {
 		return handler('vanilla', stream, headers);
 	}
-	if (pathname === '/motivational/') {
+	if (pathname === '/sse/motivational/') {
 		return handler('motivational', stream, headers);
 	}
 	return notFound(stream);

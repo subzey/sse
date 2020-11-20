@@ -3,8 +3,9 @@
 	<head></head>
 	<body>
 		<script>
-const vanilla = new EventSource('https://127.0.0.1:3443/vanilla/');
-const motivational = new EventSource('https://127.0.0.1:3443/motivational/');
+const vanilla = new EventSource('https://127.0.0.1:3443/sse/vanilla/');
+const motivational = new EventSource('https://127.0.0.1:3443/sse/motivational/');
+navigator.serviceWorker.register('/service-worker.js').then(console.log, console.error);
 		</script>
 	</body>
 </html>
